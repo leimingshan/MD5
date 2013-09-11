@@ -22,6 +22,7 @@ documentation and/or software.
 
 #include <stdio.h>
 #include <time.h>
+#include <sys/time.h>
 #include <string.h>
 #include "global.h"
 #if MD == 2
@@ -39,12 +40,12 @@ documentation and/or software.
 #define TEST_BLOCK_LEN 1000
 #define TEST_BLOCK_COUNT 1000
 
-static void MDString PROTO_LIST ((char *));
-static void MDTimeTrial PROTO_LIST ((void));
-static void MDTestSuite PROTO_LIST ((void));
-static void MDFile PROTO_LIST ((char *));
-static void MDFilter PROTO_LIST ((void));
-static void MDPrint PROTO_LIST ((unsigned char [16]));
+static void MDString(char *);
+static void MDTimeTrial(void);
+static void MDTestSuite(void);
+static void MDFile(char *);
+static void MDFilter(void);
+static void MDPrint(unsigned char [16]);
 
 #if MD == 2
 #define MD_CTX MD2_CTX
@@ -81,17 +82,17 @@ char *argv[];
   int i;
 
   if (argc > 1)
- for (i = 1; i < argc; i++)
-   if (argv[i][0] == '-' && argv[i][1] == 's')
-     MDString (argv[i] + 2);
-   else if (strcmp (argv[i], "-t") == 0)
-     MDTimeTrial ();
-   else if (strcmp (argv[i], "-x") == 0)
-     MDTestSuite ();
-   else
-     MDFile (argv[i]);
-  else
- MDFilter ();
+  for (i = 1; i < argc; i++)
+    if (argv[i][0] == '-' && argv[i][1] == 's')
+      MDString (argv[i] + 2);
+    else if (strcmp (argv[i], "-t") == 0)
+      MDTimeTrial ();
+    else if (strcmp (argv[i], "-x") == 0)
+      MDTestSuite ();
+    else
+      MDFile (argv[i]);
+    else
+      MDFilter ();
 
   return (0);
 }
@@ -120,36 +121,38 @@ char *string;
 static void MDTimeTrial ()
 {
   MD_CTX context;
-  time_t endTime, startTime;
+  struct timeval endTime, startTime;
+  double timedif;
   unsigned char block[TEST_BLOCK_LEN], digest[16];
   unsigned int i;
-  printf
- ("MD%d time trial. Digesting %d %d-byte blocks ...", MD,
+  printf ("MD%d time trial. Digesting %d %d-byte blocks ...", MD,
   TEST_BLOCK_LEN, TEST_BLOCK_COUNT);
 
   /* Initialize block */
   for (i = 0; i < TEST_BLOCK_LEN; i++)
- block[i] = (unsigned char)(i & 0xff);
+    block[i] = (unsigned char)(i & 0xff);
 
   /* Start timer */
-  time (&startTime);
+  gettimeofday(&startTime, NULL);
 
   /* Digest blocks */
   MDInit (&context);
   for (i = 0; i < TEST_BLOCK_COUNT; i++)
- MDUpdate (&context, block, TEST_BLOCK_LEN);
+    MDUpdate (&context, block, TEST_BLOCK_LEN);
   MDFinal (digest, &context);
 
   /* Stop timer */
-  time (&endTime);
+  gettimeofday(&endTime, NULL);
 
   printf (" done\n");
   printf ("Digest = ");
   MDPrint (digest);
-  printf ("\nTime = %ld seconds\n", (long)(endTime-startTime));
-  printf
- ("Speed = %ld bytes/second\n",
-  (long)TEST_BLOCK_LEN * (long)TEST_BLOCK_COUNT/(endTime-startTime));
+
+  timedif = (endTime.tv_sec - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec) / 1000000.0;
+
+  printf ("\nTime = %f seconds\n", timedif);
+  printf ("Speed = %f bytes/second\n",
+  (long)TEST_BLOCK_LEN * (long)TEST_BLOCK_COUNT / timedif);
 }
 
 /* Digests a reference suite of strings and prints the results.
@@ -163,17 +166,14 @@ static void MDTestSuite ()
   MDString ("abc");
   MDString ("message digest");
   MDString ("abcdefghijklmnopqrstuvwxyz");
-  MDString
- ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-  MDString
- ("1234567890123456789012345678901234567890\
-1234567890123456789012345678901234567890");
+  MDString ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+  MDString ("1234567890123456789012345678901234567890\
+             1234567890123456789012345678901234567890");
 }
 
 /* Digests a file and prints the result.
  */
-static void MDFile (filename)
-char *filename;
+static void MDFile (char *filename)
 {
   FILE *file;
   MD_CTX context;
@@ -181,19 +181,18 @@ char *filename;
   unsigned char buffer[1024], digest[16];
 
   if ((file = fopen (filename, "rb")) == NULL)
- printf ("%s can't be opened\n", filename);
-
+    printf ("%s can't be opened\n", filename);
   else {
- MDInit (&context);
- while (len = fread (buffer, 1, 1024, file))
-   MDUpdate (&context, buffer, len);
- MDFinal (digest, &context);
+    MDInit (&context);
+    while (len = fread (buffer, 1, 1024, file))
+      MDUpdate (&context, buffer, len);
+    MDFinal (digest, &context);
 
- fclose (file);
+    fclose (file);
 
- printf ("MD%d (%s) = ", MD, filename);
- MDPrint (digest);
- printf ("\n");
+    printf ("MD%d (%s) = ", MD, filename);
+    MDPrint (digest);
+    printf ("\n");
   }
 }
 
@@ -207,7 +206,7 @@ static void MDFilter ()
 
   MDInit (&context);
   while (len = fread (buffer, 1, 16, stdin))
- MDUpdate (&context, buffer, len);
+    MDUpdate (&context, buffer, len);
   MDFinal (digest, &context);
 
   MDPrint (digest);
@@ -222,5 +221,5 @@ unsigned char digest[16];
   unsigned int i;
 
   for (i = 0; i < 16; i++)
- printf ("%02x", digest[i]);
+    printf ("%02x", digest[i]);
 }
