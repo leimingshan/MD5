@@ -39,6 +39,7 @@ documentation and/or software.
  */
 #define TEST_BLOCK_LEN 1000
 #define TEST_BLOCK_COUNT 1000
+#define WORD_LENGTH 1
 
 static void MDString(char *);
 static void MDTimeTrial(void);
@@ -46,6 +47,7 @@ static void MDTestSuite(void);
 static void MDFile(char *);
 static void MDFilter(void);
 static void MDPrint(unsigned char [16]);
+static void MDCrypt(unsigned char [16]);
 
 #if MD == 2
 #define MD_CTX MD2_CTX
@@ -75,44 +77,44 @@ Arguments (may be any combination):
   filename - digests file
   (none)   - digests standard input
  */
-int main (argc, argv)
-int argc;
-char *argv[];
+int main (int argc, char *argv[])
 {
-  int i;
-
-  if (argc > 1)
-  for (i = 1; i < argc; i++)
-    if (argv[i][0] == '-' && argv[i][1] == 's')
-      MDString (argv[i] + 2);
-    else if (strcmp (argv[i], "-t") == 0)
-      MDTimeTrial ();
-    else if (strcmp (argv[i], "-x") == 0)
-      MDTestSuite ();
+  if (argc > 1) {
+    if (strcmp(argv[1], "-s") == 0) {
+      if (argc == 3)
+        MDString(argv[2]);
+      else
+        MDString("");
+    } else if (strcmp(argv[1], "-t") == 0)
+      MDTimeTrial();
+    else if (strcmp(argv[1], "-x") == 0)
+      MDTestSuite();
+    else if (strcmp(argv[1], "-c") == 0)
+      MDCrypt("3435c378bb76d4357324dd7e69f3cd18");
     else
-      MDFile (argv[i]);
-    else
-      MDFilter ();
+      MDFile(argv[1]);    
+  } else
+    MDFilter();
+  
 
-  return (0);
+  return 0;
 }
 
 /* Digests a string and prints the result.
  */
-static void MDString (string)
-char *string;
+static void MDString(char *string)
 {
   MD_CTX context;
   unsigned char digest[16];
-  unsigned int len = strlen (string);
+  unsigned int len = strlen(string);
 
-  MDInit (&context);
-  MDUpdate (&context, string, len);
-  MDFinal (digest, &context);
+  MDInit(&context);
+  MDUpdate(&context, string, len);
+  MDFinal(digest, &context);
 
-  printf ("MD%d (\"%s\") = ", MD, string);
-  MDPrint (digest);
-  printf ("\n");
+  printf("MD%d (\"%s\") = ", MD, string);
+  MDPrint(digest);
+  printf("\n");
 }
 
 /* Measures the time to digest TEST_BLOCK_COUNT TEST_BLOCK_LEN-byte
@@ -125,8 +127,7 @@ static void MDTimeTrial ()
   double timedif;
   unsigned char block[TEST_BLOCK_LEN], digest[16];
   unsigned int i;
-  printf ("MD%d time trial. Digesting %d %d-byte blocks ...", MD,
-  TEST_BLOCK_LEN, TEST_BLOCK_COUNT);
+  printf("MD%d time trial. Digesting %d %d-byte blocks ...", MD, TEST_BLOCK_LEN, TEST_BLOCK_COUNT);
 
   /* Initialize block */
   for (i = 0; i < TEST_BLOCK_LEN; i++)
@@ -138,37 +139,36 @@ static void MDTimeTrial ()
   /* Digest blocks */
   MDInit (&context);
   for (i = 0; i < TEST_BLOCK_COUNT; i++)
-    MDUpdate (&context, block, TEST_BLOCK_LEN);
-  MDFinal (digest, &context);
+    MDUpdate(&context, block, TEST_BLOCK_LEN);
+  MDFinal(digest, &context);
 
   /* Stop timer */
   gettimeofday(&endTime, NULL);
 
-  printf (" done\n");
-  printf ("Digest = ");
-  MDPrint (digest);
+  printf(" done\n");
+  printf("Digest = ");
+  MDPrint(digest);
 
   timedif = (endTime.tv_sec - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec) / 1000000.0;
 
-  printf ("\nTime = %f seconds\n", timedif);
-  printf ("Speed = %f bytes/second\n",
-  (long)TEST_BLOCK_LEN * (long)TEST_BLOCK_COUNT / timedif);
+  printf("\nTime = %f seconds\n", timedif);
+  printf("Speed = %f bytes/second\n", (long)TEST_BLOCK_LEN * (long)TEST_BLOCK_COUNT / timedif);
 }
 
 /* Digests a reference suite of strings and prints the results.
  */
 static void MDTestSuite ()
 {
-  printf ("MD%d test suite:\n", MD);
+  printf("MD%d test suite:\n", MD);
 
-  MDString ("");
-  MDString ("a");
-  MDString ("abc");
-  MDString ("message digest");
-  MDString ("abcdefghijklmnopqrstuvwxyz");
-  MDString ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-  MDString ("1234567890123456789012345678901234567890\
-             1234567890123456789012345678901234567890");
+  MDString("");
+  MDString("a");
+  MDString("abc");
+  MDString("message digest");
+  MDString("abcdefghijklmnopqrstuvwxyz");
+  MDString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+  MDString("1234567890123456789012345678901234567890\
+            1234567890123456789012345678901234567890");
 }
 
 /* Digests a file and prints the result.
@@ -180,19 +180,19 @@ static void MDFile (char *filename)
   int len;
   unsigned char buffer[1024], digest[16];
 
-  if ((file = fopen (filename, "rb")) == NULL)
+  if ((file = fopen(filename, "rb")) == NULL)
     printf ("%s can't be opened\n", filename);
   else {
     MDInit (&context);
-    while (len = fread (buffer, 1, 1024, file))
+    while (len = fread(buffer, 1, 1024, file))
       MDUpdate (&context, buffer, len);
-    MDFinal (digest, &context);
+    MDFinal(digest, &context);
 
-    fclose (file);
+    fclose(file);
 
-    printf ("MD%d (%s) = ", MD, filename);
-    MDPrint (digest);
-    printf ("\n");
+    printf("MD%d (%s) = ", MD, filename);
+    MDPrint(digest);
+    printf("\n");
   }
 }
 
@@ -204,22 +204,102 @@ static void MDFilter ()
   int len;
   unsigned char buffer[16], digest[16];
 
-  MDInit (&context);
-  while (len = fread (buffer, 1, 16, stdin))
-    MDUpdate (&context, buffer, len);
-  MDFinal (digest, &context);
+  MDInit(&context);
+  while (len = fread(buffer, 1, 16, stdin))
+    MDUpdate(&context, buffer, len);
+  MDFinal(digest, &context);
 
-  MDPrint (digest);
-  printf ("\n");
+  MDPrint(digest);
+  printf("\n");
 }
 
 /* Prints a message digest in hexadecimal.
  */
-static void MDPrint (digest)
-unsigned char digest[16];
+static void MDPrint(unsigned char digest[16])
 {
   unsigned int i;
-
   for (i = 0; i < 16; i++)
-    printf ("%02x", digest[i]);
+    printf("%02x", digest[i]);
+}
+
+// MD5-Crypt: Find the original word
+static unsigned char character[63] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+static int word_count = 0;
+static unsigned char md5_target16[16];
+
+static void Crack(unsigned char word[5], int index, int len)
+{
+  MD_CTX context;
+  unsigned char digest[16];
+  unsigned int i;
+  
+  if (index == 0) {
+    //MD5
+    MDInit (&context);
+    MDUpdate(&context, word, len);
+    MDFinal(digest, &context);
+
+    for (i = 0; i < len; i++)
+      printf("%c", word[i]);
+    printf(":");
+    MDPrint(digest);
+    printf("\n");
+    word_count++;
+  } else {
+    for (i = 0; i < 62; i++) {
+      word[index - 1] = character[i];
+      Crack(word, index - 1, len);
+    }
+  }
+}
+
+static void MD32ToChar16(unsigned char md5_target[32], unsigned char result[16])
+{
+  unsigned int i;
+  int re = 0;
+  for (i = 0; i < 32; i++) {
+    if (md5_target[i] >= 'a' && md5_target[i] <= 'f')
+      re += md5_target[i] - 'a' + 10;
+    else if (md5_target[i] >= 'A' && md5_target[i] <= 'F')
+      re += md5_target[i] - 'A' + 10;
+    else
+      re += md5_target[i] - '0';
+    if (i % 2 == 0)
+      re *= 16;
+    else {
+      result[i / 2] = re;
+      re = 0;
+    }
+  }
+}
+
+static void MDCrypt(unsigned char md5_target[32])
+{
+  MD_CTX context;
+  struct timeval endTime, startTime;
+  double timedif;
+  
+  unsigned int i;
+  unsigned char word[WORD_LENGTH];
+
+  MD32ToChar16(md5_target, md5_target16);
+  MDPrint(md5_target16);
+  printf("\n");
+
+  /* Start timer */
+  gettimeofday(&startTime, NULL);
+
+  for (i = 1; i <= WORD_LENGTH; i++)
+    Crack(word, i, i);
+
+  /* Stop timer */
+  gettimeofday(&endTime, NULL);
+
+  printf(" word_count: %d\n", word_count);
+  printf(" done\n");
+
+  timedif = (endTime.tv_sec - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec) / 1000000.0;
+  printf("\nTime = %f seconds\n", timedif);
+
+  return;
 }
