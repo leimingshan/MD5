@@ -25,21 +25,14 @@ documentation and/or software.
 #include <sys/time.h>
 #include <string.h>
 #include "global.h"
-#if MD == 2
-#include "md2.h"
-#endif
-#if MD == 4
-#include "md4.h"
-#endif
-#if MD == 5
 #include "md5.h"
-#endif
+
 
 /* Length of test block, number of test blocks.
  */
 #define TEST_BLOCK_LEN 1000
 #define TEST_BLOCK_COUNT 1000
-#define WORD_LENGTH 1
+#define WORD_LENGTH 4
 
 static void MDString(char *);
 static void MDTimeTrial(void);
@@ -48,19 +41,8 @@ static void MDFile(char *);
 static void MDFilter(void);
 static void MDPrint(unsigned char [16]);
 static void MDCrypt(unsigned char [16]);
+static void MDWordTime(void);
 
-#if MD == 2
-#define MD_CTX MD2_CTX
-#define MDInit MD2Init
-#define MDUpdate MD2Update
-#define MDFinal MD2Final
-#endif
-#if MD == 4
-#define MD_CTX MD4_CTX
-#define MDInit MD4Init
-#define MDUpdate MD4Update
-#define MDFinal MD4Final
-#endif
 #if MD == 5
 #define MD_CTX MD5_CTX
 #define MDInit MD5Init
@@ -86,11 +68,12 @@ int main (int argc, char *argv[])
       else
         MDString("");
     } else if (strcmp(argv[1], "-t") == 0)
-      MDTimeTrial();
+      //MDTimeTrial();
+      MDWordTime();
     else if (strcmp(argv[1], "-x") == 0)
       MDTestSuite();
     else if (strcmp(argv[1], "-c") == 0)
-      MDCrypt("3435c378bb76d4357324dd7e69f3cd18");
+      MDCrypt("8f14e45fceea167a5a36dedd4bea2543");
     else
       MDFile(argv[1]);    
   } else
@@ -226,29 +209,39 @@ static void MDPrint(unsigned char digest[16])
 static unsigned char character[63] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 static int word_count = 0;
 static unsigned char md5_target16[16];
+static int found = 0;
+static unsigned char original_word[64];
 
-static void Crack(unsigned char word[5], int index, int len)
+static void CrackWord(unsigned char word[WORD_LENGTH], int index, int len)
 {
   MD_CTX context;
   unsigned char digest[16];
   unsigned int i;
   
   if (index == 0) {
-    //MD5
+    // MD5 calculate
     MDInit (&context);
     MDUpdate(&context, word, len);
     MDFinal(digest, &context);
+    // MD5 finished
 
     for (i = 0; i < len; i++)
       printf("%c", word[i]);
     printf(":");
     MDPrint(digest);
     printf("\n");
+
+    if (strncmp(digest, md5_target16, 16) == 0) {
+      printf("\nFind!!!\n\n");
+      found = 1;
+      strncpy(original_word, word, len);
+    }
+
     word_count++;
   } else {
     for (i = 0; i < 62; i++) {
       word[index - 1] = character[i];
-      Crack(word, index - 1, len);
+      CrackWord(word, index - 1, len);
     }
   }
 }
@@ -283,6 +276,7 @@ static void MDCrypt(unsigned char md5_target[32])
   unsigned char word[WORD_LENGTH];
 
   MD32ToChar16(md5_target, md5_target16);
+  printf("Target MD5:\n");
   MDPrint(md5_target16);
   printf("\n");
 
@@ -290,7 +284,60 @@ static void MDCrypt(unsigned char md5_target[32])
   gettimeofday(&startTime, NULL);
 
   for (i = 1; i <= WORD_LENGTH; i++)
-    Crack(word, i, i);
+    CrackWord(word, i, i);
+
+  /* Stop timer */
+  gettimeofday(&endTime, NULL);
+
+  if (found)
+    printf("\n\n the original word: %s\n", original_word);
+
+  printf(" word_count: %d\n", word_count);
+  printf(" done\n");
+
+  timedif = (endTime.tv_sec - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec) / 1000000.0;
+  printf("\nTime = %f seconds\n", timedif);
+
+  return;
+}
+
+// MD5 Word Count Time Test
+static void CrackWordTime(unsigned char word[WORD_LENGTH], int index, int len)
+{
+  MD_CTX context;
+  unsigned char digest[16];
+  unsigned int i;
+  
+  if (index == 0) {
+    // MD5 calculate
+    MDInit (&context);
+    MDUpdate(&context, word, len);
+    MDFinal(digest, &context);
+    // MD5 finished
+
+    word_count++;
+  } else {
+    for (i = 0; i < 62; i++) {
+      word[index - 1] = character[i];
+      CrackWordTime(word, index - 1, len);
+    }
+  }
+}
+
+static void MDWordTime()
+{
+  MD_CTX context;
+  struct timeval endTime, startTime;
+  double timedif;
+  
+  unsigned int i;
+  unsigned char word[WORD_LENGTH];
+
+  /* Start timer */
+  gettimeofday(&startTime, NULL);
+
+  for (i = 1; i <= WORD_LENGTH; i++)
+    CrackWordTime(word, i, i);
 
   /* Stop timer */
   gettimeofday(&endTime, NULL);
@@ -299,7 +346,7 @@ static void MDCrypt(unsigned char md5_target[32])
   printf(" done\n");
 
   timedif = (endTime.tv_sec - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec) / 1000000.0;
-  printf("\nTime = %f seconds\n", timedif);
+  printf("\n Time = %f seconds\n", timedif);
 
   return;
 }
