@@ -314,7 +314,7 @@ static void CrackWordTime(unsigned char word[WORD_LENGTH], int index, int len)
     MDUpdate(&context, word, len);
     MDFinal(digest, &context);
     // MD5 finished
-
+    
     #pragma omp critical (section1)
     word_count++;
   } else {
