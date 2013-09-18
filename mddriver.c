@@ -315,8 +315,10 @@ static void CrackWordTime(unsigned char word[WORD_LENGTH], int index, int len)
     MDFinal(digest, &context);
     // MD5 finished
 
+    #pragma omp critical (section1)
     word_count++;
   } else {
+    #pragma omp parallel for num_threads(2)
     for (i = 0; i < 62; i++) {
       word[index - 1] = character[i];
       CrackWordTime(word, index - 1, len);
