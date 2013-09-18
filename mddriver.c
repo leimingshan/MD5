@@ -24,6 +24,7 @@ documentation and/or software.
 #include <time.h>
 #include <sys/time.h>
 #include <string.h>
+#include <math.h>
 #include "global.h"
 #include "md5.h"
 
@@ -42,6 +43,7 @@ static void MDFilter(void);
 static void MDPrint(unsigned char [16]);
 static void MDCrypt(unsigned char [16]);
 static void MDWordTime(void);
+static void MDWordTimeConvert(void);
 
 #if MD == 5
 #define MD_CTX MD5_CTX
@@ -70,6 +72,8 @@ int main (int argc, char *argv[])
     } else if (strcmp(argv[1], "-t") == 0)
       //MDTimeTrial();
       MDWordTime();
+    else if (strcmp(argv[1], "-ct") == 0)
+      MDWordTimeConvert();
     else if (strcmp(argv[1], "-x") == 0)
       MDTestSuite();
     else if (strcmp(argv[1], "-c") == 0)
@@ -206,7 +210,7 @@ static void MDPrint(unsigned char digest[16])
 }
 
 // MD5-Crypt: Find the original word
-static unsigned char character[63] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+static unsigned char char_set[63] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 static int word_count = 0;
 static unsigned char md5_target16[16];
 static int found = 0;
@@ -240,7 +244,7 @@ static void CrackWord(unsigned char word[WORD_LENGTH], int index, int len)
     word_count++;
   } else {
     for (i = 0; i < 62; i++) {
-      word[index - 1] = character[i];
+      word[index - 1] = char_set[i];
       CrackWord(word, index - 1, len);
     }
   }
@@ -320,7 +324,7 @@ static void CrackWordTime(unsigned char word[WORD_LENGTH], int index, int len)
   } else {
     #pragma omp parallel for num_threads(2)
     for (i = 0; i < 62; i++) {
-      word[index - 1] = character[i];
+      word[index - 1] = char_set[i];
       CrackWordTime(word, index - 1, len);
     }
   }
@@ -344,11 +348,81 @@ static void MDWordTime()
   /* Stop timer */
   gettimeofday(&endTime, NULL);
 
-  printf(" word_count: %d\n", word_count);
-  printf(" done\n");
+  printf(" Word_count: %d\n", word_count);
+  printf(" Done\n");
 
   timedif = (endTime.tv_sec - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec) / 1000000.0;
   printf("\n Time = %f seconds\n", timedif);
 
   return;
+}
+
+// Another MD5 Word Time Test
+// Use convert62
+static unsigned char word[WORD_LENGTH];
+
+static void ConvertTo62(unsigned char word[WORD_LENGTH], long value, int length)
+{
+    memset(word, 0, WORD_LENGTH);
+    if (value < 62) {
+        word[WORD_LENGTH - 1] = char_set[value];
+        return;
+    } else {
+        long result = value;
+        //char[] ch = new char[length];
+        int i = WORD_LENGTH - 1;
+        while (i >= 0 &&result > 0)
+        {
+            long val = result % 62;
+            //ch[--length] = charSet[val];
+            word[i] = char_set[val];
+            result /= 62;
+            i--;
+        }
+    }
+}
+
+static void MDWordTimeConvert()
+{
+    int minLength = 1;
+    int maxLength = WORD_LENGTH;
+    unsigned char word[WORD_LENGTH];
+
+    int word_count = 0;
+
+    struct timeval endTime, startTime;
+    double timedif;
+    MD_CTX context;
+    /* Start timer */
+    gettimeofday(&startTime, NULL);
+
+    for (int i = minLength; i <= maxLength; i++) {
+        long maxNum = (long)pow(62, i);
+
+        #pragma omp parallel for num_threads(2)
+        for (long j = 0; j < maxNum; j++) {
+            ConvertTo62(word, j, i);
+            //printf("%s\n", word);
+            unsigned char digest[16];
+            MDInit (&context);
+            MDUpdate(&context, word, i);
+            MDFinal(digest, &context);
+
+            #pragma omp critical (section1)
+            {
+                word_count++;
+            }
+        }
+    }
+
+    /* Stop timer */
+    gettimeofday(&endTime, NULL);
+
+    printf(" Word_count: %d\n", word_count);
+    printf(" Done\n");
+
+    timedif = (endTime.tv_sec - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec) / 1000000.0;
+    printf("\n Time = %f seconds\n", timedif);
+
+    return;
 }
