@@ -17,3 +17,10 @@
 *.app
 main
 
+# Visual Studio files not needed
+vs2012/Release
+vs2012/Debug
+vs2012/MD5.v11.suo
+vs2012/MD5.sdf
+vs2012/MD5.opensdf
+
