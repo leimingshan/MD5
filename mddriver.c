@@ -356,12 +356,12 @@ static void MDWordTime()
 }
 
 // Another MD5 Word Time Test
-// Use convert62
+// Use convert62 to calculate the word
 static void ConvertTo62(unsigned char word[WORD_LENGTH], long value, int length)
 {
-	memset(word, 0, WORD_LENGTH);
+	memset(word, char_set[0], WORD_LENGTH);
 	if (value < 62) {
-		word[WORD_LENGTH - 1] = char_set[value];
+		word[length - 1] = char_set[value];
 		return;
 	} else {
 		long result = value;
@@ -382,7 +382,7 @@ static void MDWordTimeConvert()
 	int minLength = 1;
 	int maxLength = WORD_LENGTH;
 	unsigned char word[WORD_LENGTH];
-
+ 
 	int word_count = 0;
 
 	struct timeval endTime, startTime;
@@ -402,7 +402,13 @@ static void MDWordTimeConvert()
 			MDInit (&context);
 			MDUpdate(&context, word, i);
 			MDFinal(digest, &context);
-
+			/* Print info
+			for (int p = 0; p < i; p++)
+				printf("%c", word[p]);
+			printf(":");
+			MDPrint(digest);
+			printf("\n");
+			*/
 #pragma omp critical (section1)
 			{
 				word_count++;
