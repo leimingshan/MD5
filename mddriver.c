@@ -365,12 +365,11 @@ static void ConvertTo62(unsigned char word[WORD_LENGTH], long value, int length)
 		return;
 	} else {
 		long result = value;
-		//char[] ch = new char[length];
-		int i = WORD_LENGTH - 1;
+		int i = length - 1;
+
 		while (i >= 0 &&result > 0)
 		{
 			long val = result % 62;
-			//ch[--length] = charSet[val];
 			word[i] = char_set[val];
 			result /= 62;
 			i--;
