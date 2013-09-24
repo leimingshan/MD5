@@ -16,6 +16,7 @@
 *.out
 *.app
 main
+md5
 
 # Visual Studio files not needed
 vs2012/Release
