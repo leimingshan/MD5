@@ -21,6 +21,7 @@ defined with C compiler flags.
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
 #include <string.h>
@@ -35,6 +36,7 @@ defined with C compiler flags.
 #define TEST_BLOCK_COUNT 1000
 #define WORD_LENGTH 4
 
+static void PrintInfo(void);
 static void MDString(char *);
 static void MDTimeTrial(void);
 static void MDTestSuite(void);
@@ -57,7 +59,10 @@ static void MDWordTimeConvert(void);
 Arguments (may be any combination):
 -sstring - digests string
 -t       - runs time trial
+-ct		 - runs time trial in convert number mode
 -x       - runs test script
+-h		 - print help info
+--help   - print help info
 filename - digests file
 (none)   - digests standard input
 */
@@ -78,13 +83,33 @@ int main (int argc, char *argv[])
 			MDTestSuite();
 		else if (strcmp(argv[1], "-c") == 0)
 			MDCrypt("8f14e45fceea167a5a36dedd4bea2543");
+		else if (strcmp(argv[1], "-h") == 0)
+			PrintInfo();
+		else if (strcmp(argv[1], "--help") == 0)
+			PrintInfo();
 		else
 			MDFile(argv[1]);    
 	} else
 		MDFilter();
 
-
 	return 0;
+}
+
+/* Print Program Info when the program started
+*/
+static void PrintInfo(void)
+{
+	printf("Usage: md5 [-options] [args...]\n\n");
+	printf("where options include:\n");
+	printf("    -sstring - digests string\n"
+		   "	-t       - runs time trial\n"
+		   "	-ct		 - runs time trial in convert number mode\n"
+		   "	-x       - runs test script\n"
+		   "	-h		 - print help info\n"
+		   "	--help   - print help info\n"
+		   "	filename - digests file\n"
+		   "	(none)   - digests standard input\n");
+	return;
 }
 
 /* Digests a string and prints the result.
@@ -188,14 +213,26 @@ static void MDFile (char *filename)
 static void MDFilter ()
 {
 	MD_CTX context;
-	int len;
-	unsigned char buffer[16], digest[16];
+	size_t len = 0;
+	unsigned char buffer[128] = {0}, digest[16] = {0};
+
+	printf("Input a word(string) (length < 128): \n");
 
 	MDInit(&context);
-	while (len = fread(buffer, 1, 16, stdin))
-		MDUpdate(&context, buffer, len);
+
+	if (fgets(buffer, 128, stdin) != NULL) {
+		len = strlen(buffer);
+		// erase '\n' at the end of the buffer
+		buffer[len - 1] = '\0';
+		len --;
+		printf("Length: %d\n", len);
+	} else
+		return;
+
+	MDUpdate(&context, buffer, len);
 	MDFinal(digest, &context);
 
+	printf("MD5 (\"%s\") = ", buffer);
 	MDPrint(digest);
 	printf("\n");
 }
@@ -351,6 +388,7 @@ static void MDWordTime()
 
 	timedif = (endTime.tv_sec - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec) / 1000000.0;
 	printf("\n Time = %f seconds\n", timedif);
+    printf(" Words per second: %.f\n", word_count / timedif);
 
 	return;
 }
@@ -424,6 +462,7 @@ static void MDWordTimeConvert()
 
 	timedif = (endTime.tv_sec - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec) / 1000000.0;
 	printf("\n Time = %f seconds\n", timedif);
+    printf(" Words per second: %.f\n", word_count / timedif);
 
 	return;
 }
