@@ -22,6 +22,7 @@ defined with C compiler flags.
 
 #include <Windows.h>
 #include <cstdio>
+#include <cstdlib>
 #include <ctime>
 #include <cstring>
 #include <cmath>
@@ -35,6 +36,7 @@ defined with C compiler flags.
 #define TEST_BLOCK_COUNT 1000
 #define WORD_LENGTH 4
 
+static void PrintInfo(void);
 static void MDString(char *);
 static void MDTimeTrial(void);
 static void MDTestSuite(void);
@@ -59,7 +61,10 @@ static void TestCounter(void);
 Arguments (may be any combination):
 -sstring - digests string
 -t       - runs time trial
+-ct		 - runs time trial in convert number mode
 -x       - runs test script
+-h		 - print help info
+--help   - print help info
 filename - digests file
 (none)   - digests standard input
 */
@@ -82,13 +87,33 @@ int main (int argc, char *argv[])
 			MDCrypt((unsigned char *)"8f14e45fceea167a5a36dedd4bea2543");
 		else if (strcmp(argv[1], "--counter") == 0)
 			TestCounter();
+		else if (strcmp(argv[1], "-h") == 0)
+			PrintInfo();
+		else if (strcmp(argv[1], "--help") == 0)
+			PrintInfo();
 		else
 			MDFile(argv[1]);    
 	} else
 		MDFilter();
 
-
 	return 0;
+}
+
+/* Print Program Info when the program started
+*/
+static void PrintInfo(void)
+{
+	printf("Usage: md5 [-options] [args...]\n\n");
+	printf("where options include:\n");
+	printf("    -sstring - digests string\n"
+		"	-t       - runs time trial\n"
+		"	-ct      - runs time trial in convert number mode\n"
+		"	-x       - runs test script\n"
+		"	-h       - print help info\n"
+		"	--help   - print help info\n"
+		"	filename - digests file\n"
+		"	(none)   - digests standard input\n");
+	return;
 }
 
 /* Digests a string and prints the result.
@@ -191,14 +216,26 @@ static void MDFile (char *filename)
 static void MDFilter ()
 {
 	MD_CTX context;
-	int len;
-	unsigned char buffer[16], digest[16];
+	size_t len = 0;
+	unsigned char buffer[128] = {0}, digest[16] = {0};
+
+	printf("Input a word(string) (length < 128): \n");
 
 	MDInit(&context);
-	while (len = fread(buffer, 1, 16, stdin))
-		MDUpdate(&context, buffer, len);
+
+	if (fgets((char *)buffer, 128, stdin) != NULL) {
+		len = strlen((char *)buffer);
+		// erase '\n' at the end of the buffer
+		buffer[len - 1] = '\0';
+		len --;
+		printf("Length: %d\n", len);
+	} else
+		return;
+
+	MDUpdate(&context, buffer, len);
 	MDFinal(digest, &context);
 
+	printf("MD5 (\"%s\") = ", buffer);
 	MDPrint(digest);
 	printf("\n");
 }
@@ -339,10 +376,10 @@ static void CrackWordTime(unsigned char word[WORD_LENGTH], int index, int len)
 		MDUpdate(&context, word, len);
 		MDFinal(digest, &context);
 		// MD5 finished
-/*
+
 #pragma omp critical (section1)
 		word_count++;
-*/
+
 	} else {
 #pragma omp parallel for num_threads(8)
 		for (i = 0; i < 62; i++) {
@@ -356,6 +393,7 @@ static void MDWordTime()
 {
 	unsigned int i;
 	unsigned char word[WORD_LENGTH];
+	double timedif;
 
 	/* Start timer */
 	StartCounter();
@@ -364,10 +402,13 @@ static void MDWordTime()
 		CrackWordTime(word, i, i);
 
 	/* Stop timer */
-	printf("\n Time = %f microseconds\n", GetCounter());
+	timedif = GetCounter();
 
 	printf(" Word_count: %d\n", word_count);
 	printf(" Done\n");
+
+	printf("\n Time = %f microseconds\n", timedif);
+	printf(" Words per second: %.f\n", word_count / timedif * 1000);
 
 	return;
 }
@@ -376,18 +417,17 @@ static void MDWordTime()
 // Use convert62
 static void ConvertTo62(unsigned char word[WORD_LENGTH], long value, int length)
 {
-	memset(word, 0, WORD_LENGTH);
+	memset(word, char_set[0], WORD_LENGTH);
 	if (value < 62) {
-		word[WORD_LENGTH - 1] = char_set[value];
+		word[length - 1] = char_set[value];
 		return;
 	} else {
 		long result = value;
-		//char[] ch = new char[length];
-		int i = WORD_LENGTH - 1;
+		int i = length - 1;
+
 		while (i >= 0 &&result > 0)
 		{
 			long val = result % 62;
-			//ch[--length] = charSet[val];
 			word[i] = char_set[val];
 			result /= 62;
 			i--;
@@ -400,6 +440,7 @@ static void MDWordTimeConvert()
 	int minLength = 1;
 	int maxLength = WORD_LENGTH;
 	unsigned char word[WORD_LENGTH];
+	double timedif;
 
 	int word_count = 0;
 	int i;
@@ -421,22 +462,23 @@ static void MDWordTimeConvert()
 			MDInit (&context);
 			MDUpdate(&context, word, i);
 			MDFinal(digest, &context);
-/*
+
 #pragma omp critical (section1)
 			{
 				word_count++;
 			}
-*/
+
 		}
 	}
 
 	/* Stop timer */
-	printf("\n Time = %f microseconds\n", GetCounter());
+	timedif = GetCounter();
 
 	printf(" Word_count: %d\n", word_count);
 	printf(" Done\n");
-	
-	
+	printf("\n Time = %f microseconds\n", timedif);
+	printf(" Words per second: %.f\n", word_count / timedif * 1000);
 
 	return;
 }
+

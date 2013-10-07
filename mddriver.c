@@ -103,7 +103,7 @@ static void PrintInfo(void)
 	printf("where options include:\n");
 	printf("    -sstring - digests string\n"
 		   "	-t       - runs time trial\n"
-		   "	-ct		 - runs time trial in convert number mode\n"
+		   "	-ct      - runs time trial in convert number mode\n"
 		   "	-x       - runs test script\n"
 		   "	-h		 - print help info\n"
 		   "	--help   - print help info\n"
@@ -435,7 +435,7 @@ static void MDWordTimeConvert()
 #pragma omp parallel for num_threads(2)
 		for (long j = 0; j < maxNum; j++) {
 			ConvertTo62(word, j, i);
-			//printf("%s\n", word);
+
 			unsigned char digest[16];
 			MDInit (&context);
 			MDUpdate(&context, word, i);
@@ -466,3 +466,4 @@ static void MDWordTimeConvert()
 
 	return;
 }
+
