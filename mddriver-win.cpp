@@ -439,7 +439,6 @@ static void MDWordTimeConvert()
 {
 	int minLength = 1;
 	int maxLength = WORD_LENGTH;
-	unsigned char word[WORD_LENGTH];
 	double timedif;
 
 	int word_count = 0;
@@ -452,6 +451,7 @@ static void MDWordTimeConvert()
 	for (i = minLength; i <= maxLength; i++) {
 		long maxNum = (long)pow(62, i);
 		long j;
+        unsigned char word[WORD_LENGTH];
 
 #pragma omp parallel for num_threads(8)
 		for (j = 0; j < maxNum; j++) {
@@ -464,10 +464,7 @@ static void MDWordTimeConvert()
 			MDFinal(digest, &context);
 
 #pragma omp critical (section1)
-			{
-				word_count++;
-			}
-
+			word_count++;			
 		}
 	}
 
