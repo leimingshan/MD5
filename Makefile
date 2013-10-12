@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O2 -std=c99 -fopenmp -lm
+CFLAGS = -O2 -m32 -std=c99 -fopenmp -lm
 
 ALL = main
 all: ${ALL}

@@ -102,13 +102,13 @@ static void PrintInfo(void)
 	printf("Usage: md5 [-options] [args...]\n\n");
 	printf("where options include:\n");
 	printf("    -sstring - digests string\n"
-		   "	-t       - runs time trial\n"
-		   "	-ct      - runs time trial in convert number mode\n"
-		   "	-x       - runs test script\n"
-		   "	-h		 - print help info\n"
-		   "	--help   - print help info\n"
-		   "	filename - digests file\n"
-		   "	(none)   - digests standard input\n");
+		   "    -t       - runs time trial\n"
+		   "    -ct      - runs time trial in convert number mode\n"
+		   "    -x       - runs test script\n"
+		   "    -h	     - print help info\n"
+		   "    --help   - print help info\n"
+		   "    filename - digests file\n"
+		   "    (none)   - digests standard input\n");
 	return;
 }
 
